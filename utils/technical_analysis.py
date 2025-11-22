@@ -160,51 +160,28 @@ def VWAP(
 
 
 def ATR(
-    df: pl.DataFrame, length: int = 14, ma: str = "wilder", new_col: str = "ATR_14"
-) -> pl.DataFrame:
-    # compute TR as a polars Series
-    tr_series = df.select(_true_range_pl(df)).to_series().to_list()  # list of TR values
-
-    if ma == "sma":
-        # use Polars rolling mean (keeps everything in Polars)
-        return df.with_columns(
-            pl.Series("tr", tr_series),
-            pl.Series(new_col, pl.Series(tr_series).rolling_mean(window_size=length)),
-        )
-    else:
-        # Wilder smoothing implemented in Python (fast, linear scan)
-        tr = np.asarray(tr_series, dtype=float)
-        atr = np.full_like(tr, np.nan, dtype=float)
-        if len(tr) >= length:
-            # first ATR value = SMA of first `length` TRs (placed at index length-1)
-            first = tr[:length].mean()
-            atr[length - 1] = first
-            # iterate (Wilder recursion)
-            for i in range(length, len(tr)):
-                atr[i] = (atr[i - 1] * (length - 1) + tr[i]) / length
-        # attach to DataFrame
-        return df.with_columns(pl.Series("tr", tr), pl.Series(new_col, atr))
-
-
-def _true_range_pl(df: pl.DataFrame) -> pl.Series:
+    high: pl.Series, low: pl.Series, close: pl.Series, period: int = 14
+) -> pl.Series:
     """
-    Helper function for 'ATR'
-
-    Parameters
-    ----------
-    df : pl.DataFrame
-        Dataframe containing OHLCV data.
-
-    Returns
-    -------
-    pl.Series
-        Series containing ATR calculations.
+    Calculates Wilder's ATR given High, Low, and Close series.
     """
+    # 1. Calculate Previous Close
+    prev_close = close.shift(1)
 
-    return df.max_horizontal(
-        [
-            (pl.col("high") - pl.col("low")),
-            (pl.col("high") - pl.col("close").shift(1)).abs(),
-            (pl.col("low") - pl.col("close").shift(1)).abs(),
-        ]
-    ).alias("tr")
+    # 2. Calculate the 3 components of True Range
+    # A: High - Low
+    # B: |High - PrevClose|
+    # C: |Low - PrevClose|
+    tr1 = high - low
+    tr2 = (high - prev_close).abs()
+    tr3 = (low - prev_close).abs()
+
+    # 3. Find the Max of those 3 (True Range)
+    # pl.max_horizontal works efficiently across multiple Series
+    tr = pl.max_horizontal([tr1, tr2, tr3])
+
+    # 4. Calculate ATR using Wilder's Smoothing
+    # Note: Wilder's Smoothing is an EMA with alpha = 1/period
+    atr = tr.ewm_mean(alpha=1 / period, min_periods=period, adjust=False)
+
+    return atr
