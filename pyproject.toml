@@ -4,11 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "YahooTools"
-version = "0.0.1"
-authors = [{name = "William Kruta"}]
-description = "..."
+version = "0.0.0"
+description = "YahooTools"
 readme = "README.md"
-requires-python = ">=3.9"
-
-[tool.setuptools.packages.find]
-where = ["YahooTools"]
+requires-python = ">=3.8"
