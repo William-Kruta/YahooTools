@@ -1,0 +1,6 @@
+mplfinance
+pandas 
+polars
+pyarrow
+scipy
+yfinance
