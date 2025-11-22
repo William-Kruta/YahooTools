@@ -185,3 +185,17 @@ def ATR(
     atr = tr.ewm_mean(alpha=1 / period, min_periods=period, adjust=False)
 
     return atr
+
+
+def get_ATR_expr(period=14):
+    """Helper to generate the ATR expression"""
+    prev_close = pl.col("close").shift(1)
+    tr = pl.max_horizontal(
+        [
+            pl.col("high") - pl.col("low"),
+            (pl.col("high") - prev_close).abs(),
+            (pl.col("low") - prev_close).abs(),
+        ]
+    )
+    # Wilder's Smoothing (alpha = 1/n)
+    return tr.ewm_mean(alpha=1 / period, min_periods=period, adjust=False)
