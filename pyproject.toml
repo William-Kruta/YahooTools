@@ -7,3 +7,10 @@ name = "YahooTools"
 version = "0.0.0"
 readme = "README.md"
 requires-python = ">=3.8"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["YahooTools*"]
+
+[tool.setuptools.package-dir]
+"" = "."
